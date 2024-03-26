@@ -35,8 +35,19 @@ In addition to the ARO and GDBench benchmarks discussed above, we found other be
 
 ### Methods / Approach: 
 
-Following [1], we believe that unconditional (no text) error prediction for a given image marginalizes the probability over the text dimension. They leverage this finding, to normalize the error predicted conditionally by this unconditional value and use the residue for the image retrieval task. In addition, they use hard negatives to contrastively finetune the diffusion backbone using the loss in equation (1). In contrast, we follow a soft negative 
-training policy that directly finetunes the diffusion model to minimize a new loss function in equation (2) that ensures that the correct caption is preferred over all other caption possibilities without the use of explicit negatives.
+Following [1], we hypothesize that unconditional (no text) error prediction for a given image marginalizes the probability over the text dimension. They leverage this finding, to normalize the error predicted conditionally by this unconditional value and use the residue for the image retrieval task. In addition, they use hard negatives to contrastively finetune the diffusion backbone using the loss in equation (1).
+
+\mathcal{L}_{\text{harg\_neg}} = \mathcal{L}_{\text{pos}} + \text{clip}(\mathcal{L}_{\text{neg}}, |\lambda\mathcal{L}_{\text{pos}}|) \tag{1}
+
+where 
+
+\mathcal{L}_{\text{pos}} = \mathbb{E}_{x,t} [\|\mathbf{e} - \mathbf{e}_{\theta}(x, t, w_{\text{pos}})\|_2^2]
+
+\mathcal{L}_{\text{neg}} = -\mathbb{E}_{x,t} [\|\mathbf{e} - \mathbf{e}_{\theta}(x, t, w_{\text{neg}})\|_2^2]
+
+
+
+In contrast, we follow a soft negative training policy that directly finetunes the diffusion model to minimize a new loss function in equation (2) that ensures that the correct caption is preferred over all other caption possibilities without the use of explicit negatives.
 
 We believe that this eliminates the need for creating hard-negatives and generating them by using swapping nouns similar to [2]. It would also allow for more stable training without the need for clipping and regularizing for gatekeeping potentially infinite gains. 
 
