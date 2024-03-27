@@ -59,6 +59,14 @@ We believe that this eliminates the need for creating hard-negatives and generat
 
 **Experiment 1**: We are fine-tuning the Stable Diffusion-1.5 using our soft negative loss in equation (2) on the COCO-Order dataset [2] that was used for hard negative training for fair comparison. 
 
+| Method | ImageCode (Image) | Winoground (Image) | Winoground (Text)
+|-------|--------|---------|--------|
+| Vanilla SD            | 30.1 | 9.0 | 32.3|
+| + MS-COCO NoNeg       | 29.7 | 10.3 | 35.0 |
+| + MS-COCO HardNeg     | 31.9 | 9.8 | 30.8 |
+| + **MS-COCO SoftNeg** | | | |
+
+Table 1: Results on GDBench components for two image retrieval tasks (ImageCode and Winoground), and one text retrieval task (Winoground). Our method **MS-COCO SoftNeg** is in bold, the results for the other methods were borrowed from [1]. The ImageCode dataset variant used is the image one, and the metric shown is R@1. The Winoground metric reported here is accuracy.
 
 ### What’s next:
 
