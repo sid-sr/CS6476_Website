@@ -49,7 +49,7 @@ $$ \mathcal{L}\_{\text{neg}} = -\mathbb{E}\_{x,t} [\|\mathbf{e} - \mathbf{e}\_{\
 In contrast, we follow a soft negative training policy that directly finetunes the diffusion model to minimize a new loss function in equation (2) that ensures that the correct caption is preferred over all other caption possibilities without the use of explicit negatives.
 
 $$
-\mathcal{L}\_{\text{soft\_neg}} = \mathbb{E}\_{x,t} \left[ \left( \| \mathbf{e} - \mathbf{e}\_{\theta}(x, t, w) \|\_2^2 - \| \mathbf{e} - \mathbf{e}\_{\theta} (x, t) \|\_2^2 \right) \right] \tag{2}
+\mathcal{L}\_{\text{soft-neg}} = \mathbb{E}\_{x,t} \left[ \left( \| \mathbf{e} - \mathbf{e}\_{\theta}(x, t, w) \|\_2^2 - \| \mathbf{e} - \mathbf{e}\_{\theta} (x, t) \|\_2^2 \right) \right]  \tag{2}
 $$
 
 
