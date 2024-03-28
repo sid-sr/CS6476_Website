@@ -66,13 +66,13 @@ For this, we first inspected MS-COCO to understand which aspects of compositiona
 
 We saw that while it captures compositional information about a scene, it does not capture fine-grained information about where each object is located. For example, the following image has a caption of "a living room with a couch and a coffee table", but does not describe the relative position of the couch with respect to the coffee table.
 
-|![](assets/images/mscoco/chair.png)|
+|![COCO Chair image](assets/images/mscoco/chair.png)|
 |:-:|
 |*Figure 1: Example from MS-COCO*|
 
 Similar to the above case, we also noted that ordering of items in the captions are not consistent with the ordering in the images. Different captions have different orderings. For example, in the following image, one caption captures an ordering that is inconsistent with the others.
 
-|![](assets/images/mscoco/fruit.png)|
+|![COCO Fruit image](assets/images/mscoco/fruit.png)|
 |:-:|
 |*Figure 2: Example from MS-COCO*|
 
@@ -93,8 +93,10 @@ We aim to use a large language model like LLaMA [9] to generate semantically and
 
 Table 1: Results on GDBench components for two image retrieval tasks (ImageCode and Winoground), and one text retrieval task (Winoground). Our method **MS-COCO SoftNeg** is in bold, the results for the other methods were borrowed from [1]. The ImageCode dataset variant used is the image one, and the metric shown is R@1. The Winoground metric reported here is accuracy.
 
+For fine-tuning, we performed distributed training on 4 NVIDIA A40s for 8 epochs, which took ~32 hours. For benchmark evaluation, ImageCode took ~45 minutes, and Winoground took ~20 minutes. 
+
 **Experiment 2**:
- 
+
 
 
 
