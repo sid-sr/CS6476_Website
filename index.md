@@ -89,7 +89,7 @@ We aim to use a large language model like LLaMA [9] to generate semantically and
 | Vanilla SD            | 30.1 | 9.0 | 32.3|
 | + MS-COCO NoNeg       | 29.7 | 10.3 | 35.0 |
 | + MS-COCO HardNeg     | 31.9 | 9.8 | 30.8 |
-| + **MS-COCO SoftNeg** | | | |
+| + **MS-COCO SoftNeg** | 29.6 | 8.8 | 30.9 |
 
 Table 1: Results on GDBench components for two image retrieval tasks (ImageCode and Winoground), and one text retrieval task (Winoground). Our method **MS-COCO SoftNeg** is in bold, the results for the other methods were borrowed from [1]. The ImageCode dataset variant used is the image one, and the metric shown is R@1. The Winoground metric reported here is accuracy.
 
