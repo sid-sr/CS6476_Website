@@ -93,7 +93,7 @@ We aim to use a large language model like LLaMA [9] to generate semantically and
 
 Table 1: Results on GDBench components for two image retrieval tasks (ImageCode and Winoground), and one text retrieval task (Winoground). Our method **MS-COCO SoftNeg** is in bold, the results for the other methods were borrowed from [1]. The ImageCode dataset variant used is the image one, and the metric shown is R@1. The Winoground metric reported here is accuracy.
 
-For fine-tuning, we performed distributed training on 4 NVIDIA A40s for 8 epochs, which took ~32 hours. For benchmark evaluation, ImageCode took ~45 minutes, and Winoground took ~20 minutes. 
+For fine-tuning, we performed distributed training on 4 NVIDIA A40s for 8 epochs, which took ~32 hours. For benchmark evaluation, ImageCode took ~45 minutes, and Winoground took ~20 minutes. At this scale, hyperparameters like batch size make a significant difference in results, so these results are very initial, we are currently experimenting with these parameters.
 
 **Experiment 2**:
 
@@ -102,7 +102,9 @@ For fine-tuning, we performed distributed training on 4 NVIDIA A40s for 8 epochs
 
 ### What’s next:
 
-Dataset Augmentation: We plan to generate a synthetic dataset that uses more compositionally confusing captions for the original image dataset. We will leverage LLaMA [9] for generating these new text captions and qualitatively evaluate the comparisons against the existing compositionality testing datasets in the ARO benchmark [2]. 
+Improving Fine-tuning: The fine-tuning we performed with our custom loss is still in progress, we need to tweak hyperparameters (specifically batch size in distributed training) and run against other components of GDBench.
+
+Dataset Augmentation: We plan to generate a synthetic dataset that uses more compositionally confusing captions for the original image dataset. We will leverage LLaMA [9] for generating these new text captions and qualitatively evaluate the comparisons against the existing compositionality testing datasets in the ARO benchmark [2].
 
 
 ### Team Member Contributions: 
