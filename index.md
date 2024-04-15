@@ -12,11 +12,15 @@ toc: true
 [GitHub Website Repo](https://github.com/sid-sr/CS6476_Website/)
 
 ## Introduction / Problem Definition: 
-Diffusion models operate by gradually transforming random noise into a coherent output (like an image, audio, or video) through a process that iteratively refines the output by predicting and removing noise at each step, guided by learned data patterns. This unique approach allows them to scale up to mega-resolutions, enabling the creation of highly detailed and imaginative outputs across various forms of media, showcasing their remarkable ability to synthesize complex and nuanced content.
+**High-level Description and Motivation**: Diffusion models operate by gradually transforming random noise into a coherent output (like an image, audio, or video) through a process that iteratively refines the output by predicting and removing noise at each step, guided by learned data patterns. This unique approach allows them to scale up to mega-resolutions, enabling the creation of highly detailed and imaginative outputs across various forms of media, showcasing their remarkable ability to synthesize complex and nuanced content.
 
-One significant challenge that diffusion models face is their struggle with compositionality, specifically their difficulty in understanding how different attributes are interconnected and in learning the rules for combining these attributes from language descriptions. For instance, diffusion models often fail to generate distinctly different outputs for descriptions like "a sheep to the right of a goat" versus "a goat to the right of a sheep." This limitation hampers their performance in visio-linguistic reasoning tasks, such as accurately matching images with text descriptions or vice versa. We believe this issue arises primarily due to the diffusion models' training approach, which lacks a mechanism for penalizing incorrect examples, unlike contrastive learning methods that specifically reinforce correct associations and penalize incorrect ones. Additionally, the reliance on CLIP-based text encoders, which have inherent weaknesses in handling complex visio-linguistic compositions, exacerbates this problem. 
+**Specific Problem Definition**: One significant challenge that diffusion models face is their struggle with compositionality, specifically their difficulty in understanding how different attributes are interconnected and in learning the rules for combining these attributes from language descriptions. For instance, diffusion models often fail to generate distinctly different outputs for descriptions like "a sheep to the right of a goat" versus "a goat to the right of a sheep." This limitation hampers their performance in visio-linguistic reasoning tasks, such as accurately matching images with text descriptions or vice versa. We believe this issue arises primarily due to the diffusion models' training approach, which lacks a mechanism for penalizing incorrect examples, unlike contrastive learning methods that specifically reinforce correct associations and penalize incorrect ones. Additionally, the reliance on CLIP-based text encoders, which have inherent weaknesses in handling complex visio-linguistic compositions, exacerbates this problem. 
 
-To address these challenges, our strategy involves implementing a soft negative training approach inspired by Krojer et al. [1], without resorting to hard negatives as in Yuksekgonul et al. [2]. Orthogonally, we plan to enhance the dataset by introducing more compositionally challenging negative captions, generated using LLaMA [9], to improve the models' understanding and handling of compositional visio-linguistic reasoning.
+|![SD-bad-example](assets/images/comp_example.png)|
+|:-:|
+|*Figure 1: Example of Stable Diffusion text-to-image generation from the DrawBench prompts [10], image shown in [1].*|
+
+Figure 1 is an example of poor compositional reasoning. The prompt given to Stable Diffusion [6] is "A stack of 3 books. A green book is on the top, sitting on a red book. The blue book is on the bottom." It does generate a stack of books but the relative positioning is not as expected. 
 
 ### Related Works: 
 
@@ -68,19 +72,29 @@ We saw that while it captures compositional information about a scene, it does n
 
 |![COCO Chair image](assets/images/mscoco/chair.png)|
 |:-:|
-|*Figure 1: Example from MS-COCO*|
+|*Figure 2: Example from MS-COCO*|
 
 Similar to the above case, we also noted that ordering of items in the captions are not consistent with the ordering in the images. Different captions have different orderings. For example, in the following image, one caption captures an ordering that is inconsistent with the others.
 
 |![COCO Fruit image](assets/images/mscoco/fruit.png)|
 |:-:|
-|*Figure 2: Example from MS-COCO*|
+|*Figure 3: Example from MS-COCO*|
 
 But we are bounded by the MS-COCO dataset, since datasets with high-quality compositional information like Winoground are difficult to manually curate and are hence very small (800 samples). So instead, we aim to improve the hard-negative mining method used by Yuksukgonul et al. [2]. The generated captions in their method currently do not semantically and gramatically make sense. For example, their COCO-Order component of ARO cites an example where they perturb the caption "A brown cat is looking at a gray dog sitting in a white bathtub" to "at brown cat a in looking a gray dog sitting is and a white bathtub" through shuffing all but adjectives and nouns.
 
 We aim to use a large language model like LLaMA [9] to generate semantically and gramatically valid hard-negatives and train SD as in [2] to analyse if this method improves visuo-linguistic reasoning in diffusion models.
 
-### Experiments / Results: 
+### Experiment Setup:
+
+**Experiment Purpose**
+
+**Input Description**:
+
+**Desired Output Description**:
+
+**Metric for Success**:
+
+### Results: 
 
 **Experiment 1**: We are fine-tuning the Stable Diffusion-1.5 using our soft negative loss in equation (2) on the COCO-Order dataset [2] that was used for hard negative training for fair comparison. 
 
@@ -97,11 +111,9 @@ For fine-tuning, we performed distributed training on 4 NVIDIA A40s for 8 epochs
 
 For the hard-negative generation experiment, we are experimenting with zero- and few-shot prompting, and are yet to start fine-tuning SD on these captions.
 
-### What’s next:
+### Discussion:
 
-Improving Fine-tuning: The fine-tuning we performed with our custom loss is still in progress, we need to tweak hyperparameters (specifically batch size in distributed training) and run against other components of GDBench.
-
-Dataset Augmentation: We plan to generate a synthetic dataset that uses more compositionally confusing captions for the original image dataset. We will leverage LLaMA [9] (zero-shot and few-shot prompting) for generating these new text captions and qualitatively evaluate the comparisons against the existing compositionality testing datasets in the ARO benchmark [2].
+### Challenges Encountered:
 
 
 ### Team Member Contributions: 
@@ -129,3 +141,5 @@ Dataset Augmentation: We plan to generate a synthetic dataset that uses more com
 [8] Thrush, T., et al, "Winoground: Probing vision and language models for visio-linguistic compositionality," in _Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition_, 2022, pp. 5238–5248.
 
 [9] Touvron, H., et al. "Llama: Open and efficient foundation language models," in _arXiv preprint_ arXiv:2302.13971, 2023.
+
+[10] Saharia, C., et al, "Photorealistic Text-to-Image Diffusion Models with Deep Language Understanding," in _Advances in Neural Information Processing Systems_, 2022, pp. 36479–36494.
