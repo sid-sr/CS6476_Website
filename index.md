@@ -16,21 +16,23 @@ toc: true
 
 **Specific Problem Definition**: One significant challenge that diffusion models face is their struggle with compositionality, specifically their difficulty in understanding how different attributes are interconnected and in learning the rules for combining these attributes from language descriptions. For instance, diffusion models often fail to generate distinctly different outputs for descriptions like "a sheep to the right of a goat" versus "a goat to the right of a sheep." This limitation hampers their performance in visio-linguistic reasoning tasks, such as accurately matching images with text descriptions or vice versa. We believe this issue arises primarily due to the diffusion models' training approach, which lacks a mechanism for penalizing incorrect examples, unlike contrastive learning methods that specifically reinforce correct associations and penalize incorrect ones. Additionally, the reliance on CLIP-based text encoders, which have inherent weaknesses in handling complex visio-linguistic compositions, exacerbates this problem. 
 
+**Visual Example**:
+
 |![SD-bad-example](assets/images/comp_example.png)|
 |:-:|
-|*Figure 1: Example of Stable Diffusion text-to-image generation from the DrawBench prompts [10], image shown in [1].*|
+|Figure 1: Example of Stable Diffusion text-to-image generation from the DrawBench prompts [10], image shown in [1].|
 
-Figure 1 is an example of poor compositional reasoning. The prompt given to Stable Diffusion [6] is "A stack of 3 books. A green book is on the top, sitting on a red book. The blue book is on the bottom." It does generate a stack of books but the relative positioning is not as expected. 
+Figure 1 is an example of poor compositional reasoning. The prompt given to Stable Diffusion [6] is "_A stack of 3 books. A green book is on the top, sitting on a red book. The blue book is on the bottom._" It does generate a stack of books but the relative positioning is not as expected. 
 
 ### Related Works: 
 
-#### _Methods_
+#### Methods
 
 The following are two motivating approaches that we build upon:
 
-Yuksekgonul et al. [2] show that state-of-the-art Vision and Language Models (VLMs) perform poorly on image generation tasks that involve compositionality. They curate a benchmark dataset of image-text pairs that cover various types of Attributes, Relations and Order (ARO) information. They generate misordered hard-negatives through perturbation of words in the captions. They show that state-of-the-art VLMs are not sensitive to ordering of objects, and instead behave like a bag-of-words model. They conduct experiments to show that composition-aware hard negative mining (of both images and captions) significantly improves compositionality and ordering performance.
+Yuksekgonul et al. [2] show that state-of-the-art Vision and Language Models (VLMs) perform poorly on image generation tasks that involve compositionality. They curate a benchmark dataset of image-text pairs that cover various types of Attributes, Relations and Order (ARO) information. They generate misordered hard-negatives through rule-based perturbation of words in the captions. They show that state-of-the-art VLMs are not sensitive to ordering of objects, and instead behave like a bag-of-words model, and that this is incentivised by the set up of training objectives and datasets for retrieval tasks. They conduct experiments to show that composition-aware hard negative mining (of both images and captions) significantly improves compositionality and ordering performance.
 
-Krojer et al. [1] attempts to solve this problem by fine-tuning a pre-trained diffusion model using a loss that maximizes error predicted for negative samples and minimizes error for the positive sample. They also propose DiffusionITM, a scheme that converts a generative model to a discriminative zero-shot image-text matching model, which allows generative models to now be tested on discriminative vision-and-language benchmarks. They also introduce GDBench, a benchmark dataset consisting of image-text pairs that capture a wide range of compositions.
+Krojer et al. [1] attempts to solve this problem by fine-tuning a pre-trained diffusion model using a loss that maximizes error predicted for negative samples and minimizes error for the positive sample. They generate image negatives with CLIP [5] and text negatives using the rule-based perturbation method from [2]. They also propose _DiffusionITM_, a scheme that converts a generative model to a discriminative zero-shot image-text matching model, which allows generative models to now be tested on discriminative vision-and-language benchmarks. They also introduce GDBench, a benchmark dataset consisting of image-text pairs that capture a wide range of compositions.
 
 We also found alternate approaches that focus on compositionality performance:
 
@@ -38,33 +40,45 @@ Qu et al. [3] aim to solve the text-to-image misalignment problem by improving t
 
 Basu et al. [4] improve visuo-linguistic reasoning in CLIP [5] by modifying its standard loss to include a distillation loss component from a text-to-image model such as Stable Diffusion. They linearly map CLIP’s image encoder output into the SD’s U-Net input space, and learn this map by adding the denoising diffusion score to the CLIP loss. While the compositionality performance still remains bounded by SD’s abilities, they show that CLIP achieves significantly better visuo-linguistic reasoning by integrating knowledge from diffusion models.
 
-#### _Benchmarks_
+#### Benchmarks
 
-In addition to the ARO and GDBench benchmarks discussed above, we found other benchmarks specific to compositionality. Thrush et al. [8] introduce Winoground, a carefully hand-crafted benchmark dataset of 1600 image-text pairs (800 being correct and 800 being incorrect) that differ in word ordering. Similar to [1], they show that VLMs show poor performance (close to random chance) when it comes to compositionality. 
+In addition to the ARO and GDBench benchmarks discussed above, we found other benchmarks specific to compositionality. Thrush et al. [8] introduce Winoground, a carefully hand-crafted benchmark dataset of 1600 image-text pairs (800 being correct and 800 being incorrect) that differ in word ordering. They validate the result in [1], that VLMs show poor performance (close to random chance) when it comes to compositionality in retrieval tasks. 
+
+#### Our project in context
+
+The works in this space are mainly divided into data-centric approaches [2] and model-centric approaches [1] [3]. Our project separately tests modifies and tests both these approaches. We believe grammatical and semantic validity of hard-negative generation is important (missing in [2]), and orthogonally, we could relax of the requirement of difficult-to-generate hard-negatives in the first place, by reformulating the objective for image retrieval.
 
 ### Methods / Approach: 
 
+We propose two orthogonal methods to help improve compositionality performance.
+
+#### Method 1 Overview:
+
 Following [1], we hypothesize that unconditional (no text) error prediction for a given image marginalizes the probability over the text dimension. They leverage this finding, to normalize the error predicted conditionally by this unconditional value and use the residue for the image retrieval task. In addition, they use hard negatives to contrastively finetune the diffusion backbone using the loss in equation (1).
 
-$$ \mathcal{L}\_{\text{hard-neg}} = \mathcal{L}\_{\text{pos}} + \text{clip}(\mathcal{L}\_{\text{neg}}, |\lambda\mathcal{L}\_{\text{pos}}|) \tag{1} $$
+$$ \mathcal{L}_{\text{hard-neg}} = \mathcal{L}_{\text{pos}} + \text{clip}(\mathcal{L}_{\text{neg}}, |\lambda\mathcal{L}_{\text{pos}}|) \tag{1} $$
 
 where 
 
-$$ \mathcal{L}\_{\text{pos}} = {\mathbb{E}}\_{x,t} [\|\mathbf{e} - \mathbf{e}\_{\theta}(x, t, w_{\text{pos}})\|_2^2] $$
+$$ \mathcal{L}_{\text{pos}} = {\mathbb{E}}_{x,t} [\|\mathbf{e} - \mathbf{e}_{\theta}(x, t, w_{\text{pos}})\|_2^2] $$
 
-$$ \mathcal{L}\_{\text{neg}} = -\mathbb{E}\_{x,t} [\|\mathbf{e} - \mathbf{e}\_{\theta}(x, t, w_{\text{neg}})\|_2^2] $$
+$$ \mathcal{L}_{\text{neg}} = -{\mathbb{E}}_{x,t} [\|\mathbf{e} - \mathbf{e}_{\theta}(x, t, w_{\text{neg}})\|_2^2] $$
 
+#### Method 1 Contribution:
 
-In contrast, we follow a soft negative training policy that directly finetunes the diffusion model to minimize a new loss function in equation (2) that ensures that the correct caption is preferred over all other caption possibilities without the use of explicit negatives.
+In contrast, we propose a soft negative training policy that directly finetunes the diffusion model to minimize a new loss function in Equation 2 that ensures that the correct caption is preferred over all other caption possibilities without the use of explicit negatives.
 
 $$
-\mathcal{L}\_{\text{soft-neg}} = \mathbb{E}\_{x,t} \left[ \left( \| \mathbf{e} - \mathbf{e}\_{\theta}(x, t, w) \|_2^2 - \| \mathbf{e} - \mathbf{e}\_{\theta} (x, t) \|_2^2 \right) \right]  \tag{2}
+\mathcal{L}_{\text{soft-neg}} = \mathbb{E}_{x,t} \left[ \left( \| \mathbf{e} - \mathbf{e}_{\theta}(x, t, w) \|_2^2 - \| \mathbf{e} - \mathbf{e}_{\theta} (x, t) \|_2^2 \right) \right]  \tag{2}
 $$
 
+#### Method 1 Intuition:
 
-We believe that this eliminates the need for creating hard-negatives and generating them by using swapping nouns similar to [2]. It would also allow for more stable training without the need for clipping and regularizing for gatekeeping potentially infinite gains. 
+We believe that this loss eliminates the need for creating hard-negatives and generating them by using swapping nouns similar to [2]. It would also allow for more stable training without the need for clipping and regularizing to gatekeep potentially infinite gains. 
 
-In the second orthogonal approach, we aim to improve the quality of text hard-negatives used in [2], where they use rule-based noun and verb reordering to generate compositionally confusing captions for images from MS-COCO. 
+#### Method 2 Overview:
+
+In the second orthogonal approach, we use orignal contrastive loss function as [2], but aim to improve the quality of text hard-negatives used instead, where they use rule-based noun, adjective and verb reordering to generate compositionally confusing captions for images from MS-COCO. 
 
 For this, we first inspected MS-COCO to understand which aspects of compositionality it captures and which it does not, and look at how those are represented in different components of GDBench.
 
@@ -72,17 +86,69 @@ We saw that while it captures compositional information about a scene, it does n
 
 |![COCO Chair image](assets/images/mscoco/chair.png)|
 |:-:|
-|*Figure 2: Example from MS-COCO*|
+|Figure 2: Example from MS-COCO|
 
 Similar to the above case, we also noted that ordering of items in the captions are not consistent with the ordering in the images. Different captions have different orderings. For example, in the following image, one caption captures an ordering that is inconsistent with the others.
 
 |![COCO Fruit image](assets/images/mscoco/fruit.png)|
 |:-:|
-|*Figure 3: Example from MS-COCO*|
+|Figure 3: Example from MS-COCO|
 
 But we are bounded by the MS-COCO dataset, since datasets with high-quality compositional information like Winoground are difficult to manually curate and are hence very small (800 samples). So instead, we aim to improve the hard-negative mining method used by Yuksukgonul et al. [2]. The generated captions in their method currently do not semantically and gramatically make sense. For example, their COCO-Order component of ARO cites an example where they perturb the caption "A brown cat is looking at a gray dog sitting in a white bathtub" to "at brown cat a in looking a gray dog sitting is and a white bathtub" through shuffing all but adjectives and nouns.
 
-We aim to use a large language model like LLaMA [9] to generate semantically and gramatically valid hard-negatives and train SD as in [2] to analyse if this method improves visuo-linguistic reasoning in diffusion models.
+Concretely, their strategy uses four perturbation rules for each caption: 1) Shuffle nouns and adjectives, 2) Shuffle everything but nouns and adjectives, 3) Shuffle trigrams and 4) Shuffle words within each trigram. Rule 3 and 4 can lead to gramatically incorrect sentences.
+
+#### Method 2 Contribution
+
+Generating grammatically and semantically valid hard negatives is difficult to automate as it requires linguistic reasoning, this is a task large language models (LLMs) could deal with. We use LLaMA-2 [9], a large foundation model capable of text generation, to generate semantically and gramatically valid hard-negatives of captions in MS-COCO and train SD as in [2] to analyse if this method improves visuo-linguistic reasoning in diffusion models.
+
+Since hard-negatives is not a general concept, we use few-shot learning to teach LLaMA 2 to generate a hard-negative for a given caption. In few-shot learning, the prompt involves providing a set of caption--hard-negative pairs in the prompt, and then providing a new caption for the model to generate a hard negative for. We engineering the following prompt:
+
+```
+Instructions:
+1. You are given a CAPTION describing an image composed of multiple items. Your task is to generate a new caption (RESULT) where the items are reordered in the composition such that it would describe a different image.
+2. The generated caption (RESULT) should not contain any additional items or adjectives that were not present originally in CAPTION.
+3. The generated caption (RESULT) should not omit any items or adjectives present in CAPTION.
+4. The generated caption (RESULT) should be grammatically corect and should semantically make sense.
+5. Your task is to do this for the CAPTION under "Your Task".
+
+Some examples have been provided for you to learn how to do this task.
+
+Example 1:
+CAPTION:
+A small child wearing headphones plays on the computer.
+
+RESULT:
+A small child plays with headphones near a computer.
+
+Example 2:
+CAPTION:
+A baby lies on blue and green bedding next to a teddy bear.
+
+RESULT:
+A teddy bear lies on green and blue bedding next to a baby.
+
+Your Task:
+CAPTION:
+{caption}
+
+RESULT:
+```
+**Alternate Approach**: We also tested an approach where we prompt an LLM to correct the existing gramatically invalid captions in [2] given the original positive caption as context. This method often led to the LLM simply generating the positive caption (or a slightly different grammatical variation of it) as the output.
+
+#### Method 2 Intuition:
+
+[1] states that the datasets and objective used to train Stable Diffusion do not explicitly incentivise learning compositional information. When not training with hard negatives, [1] claims that neural nets utilise shortcut strategies to maximise performance on general-purpose retrieval tasks. To combat this, they generate hard-negatives, but since their rules do not generate grammatically and semantically valid captions, it could simply incentivise models to simply learn differences in what is gramatically right and wrong, and not the underlying compositional variations of the objects, we claim this would lead to yet another shortcut strategy.
+
+Our intuition is that by using grammatically and semantically valid hard negatives, we remove this shortcut, and it could better incentivise the model to learn the underlying fine-grained compositional differences between a positive and negative caption. 
+
+#### Visual
+
+Figure 4 shows an example of the caption-generation component, with a real hard-negative caption generated by LLaMA-2 for an image from MS-COCO.
+
+|![LLM Hard Negative Generation](assets/images/llmapproach.png)|
+|:-:|
+|Figure 4: Hard-negative Generation|
 
 ### Experiment Setup:
 
@@ -118,9 +184,9 @@ For the hard-negative generation experiment, we are experimenting with zero- and
 
 ### Team Member Contributions: 
 
-- Archana Kutumbaka: Tune the parameters for soft negative finetuning and conduct evaluations on GDBench. 
+- Archana Kutumbaka: Designing and implementing the soft-negative loss, fine-tuning Stable Diffusion with this objective, and with LLM-generated hard-negatives, write-up on approach and result analysis.
 
-- Siddharth Sriraman: Generate the augmented COCO-Order dataset using LLaMA and compare against existing dataset for compositionality testing. 
+- Siddharth Sriraman: Analysing compositionality in MS-COCO, generating the augmented MS-COCO captions using LLaMA-2, running GDBench benchmark on trained checkpoints, results analysis.
 
 ### References:
 
