@@ -20,7 +20,7 @@ toc: true
 
 |![SD-bad-example](assets/images/comp_example.png)|
 |:-:|
-|Figure 1: Example of Stable Diffusion text-to-image generation from the DrawBench prompts [10], image shown in [1].|
+|Figure 1: Example of Stable Diffusion text-to-image generation from the DrawBench prompts [10], image shown in [1, Figure 5a].|
 
 Figure 1 is an example of poor compositional reasoning. The prompt given to Stable Diffusion [6] is "_A stack of 3 books. A green book is on the top, sitting on a red book. The blue book is on the bottom._" It does generate a stack of books but the relative positioning is not as expected. 
 
@@ -46,13 +46,13 @@ In addition to the ARO and GDBench benchmarks discussed above, we found other be
 
 #### Our project in context
 
-The works in this space are mainly divided into data-centric approaches [2] and model-centric approaches [1] [3]. Our project separately tests modifies and tests both these approaches. We believe grammatical and semantic validity of hard-negative generation is important (missing in [2]), and orthogonally, we could relax of the requirement of difficult-to-generate hard-negatives in the first place, by reformulating the objective for image retrieval.
+The works in this space are mainly divided into _data-centric_ approaches [2] and _model-centric_ approaches [1] [3]. Our project modifies key aspects of both these approaches and tests them separately. Specifically, we believe grammatical and semantic validity of hard-negative generation is important (missing in [2]), and orthogonally, we aim to relax of the requirement of difficult-to-generate hard-negatives in the first place, by reformulating the training objective for image retrieval.
 
-### Methods / Approach: 
+### Methods / Approach:
 
 We propose two orthogonal methods to help improve compositionality performance.
 
-#### Method 1 Overview:
+#### Method 1 Overview
 
 Following [1], we hypothesize that unconditional (no text) error prediction for a given image marginalizes the probability over the text dimension. They leverage this finding, to normalize the error predicted conditionally by this unconditional value and use the residue for the image retrieval task. In addition, they use hard negatives to contrastively finetune the diffusion backbone using the loss in equation (1).
 
@@ -64,7 +64,7 @@ $$ \mathcal{L}_{\text{pos}} = {\mathbb{E}}_{x,t} [\|\mathbf{e} - \mathbf{e}_{\th
 
 $$ \mathcal{L}_{\text{neg}} = -{\mathbb{E}}_{x,t} [\|\mathbf{e} - \mathbf{e}_{\theta}(x, t, w_{\text{neg}})\|_2^2] $$
 
-#### Method 1 Contribution:
+#### Method 1 Contribution
 
 In contrast, we propose a soft negative training policy that directly finetunes the diffusion model to minimize a new loss function in Equation 2 that ensures that the correct caption is preferred over all other caption possibilities without the use of explicit negatives.
 
@@ -72,17 +72,15 @@ $$
 \mathcal{L}_{\text{soft-neg}} = \mathbb{E}_{x,t} \left[ \left( \| \mathbf{e} - \mathbf{e}_{\theta}(x, t, w) \|_2^2 - \| \mathbf{e} - \mathbf{e}_{\theta} (x, t) \|_2^2 \right) \right]  \tag{2}
 $$
 
-#### Method 1 Intuition:
+#### Method 1 Intuition
 
 We believe that this loss eliminates the need for creating hard-negatives and generating them by using swapping nouns similar to [2]. It would also allow for more stable training without the need for clipping and regularizing to gatekeep potentially infinite gains. 
 
-#### Method 2 Overview:
+#### Method 2 Overview
 
 In the second orthogonal approach, we use orignal contrastive loss function as [2], but aim to improve the quality of text hard-negatives used instead, where they use rule-based noun, adjective and verb reordering to generate compositionally confusing captions for images from MS-COCO. 
 
-For this, we first inspected MS-COCO to understand which aspects of compositionality it captures and which it does not, and look at how those are represented in different components of GDBench.
-
-We saw that while it captures compositional information about a scene, it does not capture fine-grained information about where each object is located. For example, the following image has a caption of "a living room with a couch and a coffee table", but does not describe the relative position of the couch with respect to the coffee table.
+For this, we first inspected MS-COCO to understand which aspects of compositionality it captures and which it does not. We saw that while it captures compositional information about a scene, it does not capture fine-grained information about where each object is located. For example, the following image has a caption of "a living room with a couch and a coffee table", but does not describe the relative position of the couch with respect to the coffee table.
 
 |![COCO Chair image](assets/images/mscoco/chair.png)|
 |:-:|
@@ -94,7 +92,7 @@ Similar to the above case, we also noted that ordering of items in the captions 
 |:-:|
 |Figure 3: Example from MS-COCO|
 
-But we are bounded by the MS-COCO dataset, since datasets with high-quality compositional information like Winoground are difficult to manually curate and are hence very small (800 samples). So instead, we aim to improve the hard-negative mining method used by Yuksukgonul et al. [2]. The generated captions in their method currently do not semantically and gramatically make sense. For example, their COCO-Order component of ARO cites an example where they perturb the caption "A brown cat is looking at a gray dog sitting in a white bathtub" to "at brown cat a in looking a gray dog sitting is and a white bathtub" through shuffing all but adjectives and nouns.
+However, we are ultimately bounded by the MS-COCO dataset, since datasets with high-quality compositional information like Winoground are difficult to manually curate and are hence very small (800 samples) and infeasible to fine-tune with. So instead, we aim to improve the hard-negative mining method used by Yuksukgonul et al. [2]. The generated captions in their method currently do not semantically and gramatically make sense. For example, their COCO-Order component of ARO cites an example where they perturb the caption "A brown cat is looking at a gray dog sitting in a white bathtub" to "at brown cat a in looking a gray dog sitting is and a white bathtub" through shuffing all but adjectives and nouns.
 
 Concretely, their strategy uses four perturbation rules for each caption: 1) Shuffle nouns and adjectives, 2) Shuffle everything but nouns and adjectives, 3) Shuffle trigrams and 4) Shuffle words within each trigram. Rule 3 and 4 can lead to gramatically incorrect sentences.
 
@@ -136,7 +134,7 @@ RESULT:
 ```
 **Alternate Approach**: We also tested an approach where we prompt an LLM to correct the existing gramatically invalid captions in [2] given the original positive caption as context. This method often led to the LLM simply generating the positive caption (or a slightly different grammatical variation of it) as the output.
 
-#### Method 2 Intuition:
+#### Method 2 Intuition
 
 [1] states that the datasets and objective used to train Stable Diffusion do not explicitly incentivise learning compositional information. When not training with hard negatives, [1] claims that neural nets utilise shortcut strategies to maximise performance on general-purpose retrieval tasks. To combat this, they generate hard-negatives, but since their rules do not generate grammatically and semantically valid captions, it could simply incentivise models to simply learn differences in what is gramatically right and wrong, and not the underlying compositional variations of the objects, we claim this would lead to yet another shortcut strategy.
 
@@ -154,15 +152,41 @@ Figure 4 shows an example of the caption-generation component, with a real hard-
 
 **Experiment Purpose**
 
-**Input Description**:
+We run two experiments, both fine-tuning the Stable Diffusion 1.5 model using the MS-COCO dataset. The first one uses the soft-negative loss we formulated, while the second one uses the hard-negative loss used in DiffusionITM [2] but with our LLM-generated hard-negatives. 
 
-**Desired Output Description**:
+To generate hard-negative captions, we used a self-hosted LLaMA-2 model on an NVIDIA V100 GPU using Colab Pro. Given the length of our prompt and compute, one limitation was that we needed to ensure our prompts are short enough to generate captions in a reasonable amount of time for 109k captions. This is a reason why we did not go with a more concrete description of hard-negatives in the prompt and did not provide too many examples. Overall, the prompt generation took ~10 hours. 
 
-**Metric for Success**:
+**Input Description**
+
+We used the sample of the MS-COCO 2014 [11] dataset used in the DiffusionITM [1] paper, which provided the text and image hard-negatives for 109k samples from MS-COCO. The images are in RGB and are resized to dimensions of 512x512. 
+
+DiffusionITM [1] provides anywhere between one and four hard-negative captions for each image, and samples any one at random during training. We added our LLM-generated hard-negative caption to this list for each image. We did not fine-tune purely on the LLM-generated hard-negatives alone, since we could not generate multiple distinct yet grammatically and semantically valid hard-negatives through an LLM. 
+
+**Desired Output Description**
+
+The text-to-image Stable Diffusion 1.5 simply model generates an image conditioned on a caption. Now, the DiffusionITM [1] formulation transforms the model to work for zero-shot image-text matching as follows: it defines the DiffusionITM score as the noise prediction error of the SD model conditioned on the caption and subtracts it from the error when not conditioned on the caption (no text). This score measures similarity between the caption and image, so a positive caption-image pair should ideally have a higher score than the same image paired with a compositionally hard-negative caption, exhibiting visuo-linguistic reasoning.
+
+With this formulation, we evaluate our fine-tuned model against the Winoground [8] compositionality benchmark (which has 800 correct and 800 incorrect image-caption pairings that tests compositional reasoning). The output description and an example of Winoground is given in the next section.
+
+**Metric for Success**
+
+The Winoground benchmark defines two success metrics: the text score and image score. A sample from Winoground is represented as $$(C_0, I_0, C_1, I_1)$$, which contains a correct image-caption pair $$(C_0, I_0)$$ and a compositionally-confusing complementary pair $$(C_1, I_1)$$ that is also correct. Thus, pairings $$(C_1, I_0)$$ and $$(C_0, I_1)$$ would be incorrect.
+
+The text score is defined as the fraction of samples where **both**:
+1. The similarity score (in our case, the DiffusionITM score) for $$(C_0, I_0)$$ exceeds the score for $$(C_1, I_0)$$ (wrong caption for image $$I_0$$).
+2. The similarity score for $$(C_1, I_1)$$ exceeds the score for $$(C_0, I_1)$$ (wrong caption for image $$I_1$$).
+
+In the similar way, the image score is defined as the fraction of samples where **both**:
+1. The similarity score for $$(C_0, I_0)$$ exceeds the score for $$(C_0, I_1)$$ (wrong image for caption $$C_0$$).
+2. The similarity score for $$(C_1, I_1)$$ exceeds the score for $$(C_1, I_0)$$ (wrong image for caption $$C_1$$).
+
+|![Winoground Example](assets/images/winoground.png)|
+|:-:|
+|Figure 5: Two complementary Winoground image-text pairs, taken from [8, Figure 1].|
 
 ### Results: 
 
-**Experiment 1**: We are fine-tuning the Stable Diffusion-1.5 using our soft negative loss in equation (2) on the COCO-Order dataset [2] that was used for hard negative training for fair comparison. 
+**Experiment 1**: We are fine-tuning the Stable Diffusion-1.5 using our soft negative loss in equation (2) on the same MS-COCO dataset that was used for hard negative training in [1] for fair comparison. 
 
 | Method | ImageCode (Image) | Winoground (Image) | Winoground (Text)
 |-------|--------|---------|--------|
@@ -209,3 +233,5 @@ For the hard-negative generation experiment, we are experimenting with zero- and
 [9] Touvron, H., et al. "Llama: Open and efficient foundation language models," in _arXiv preprint_ arXiv:2302.13971, 2023.
 
 [10] Saharia, C., et al, "Photorealistic Text-to-Image Diffusion Models with Deep Language Understanding," in _Advances in Neural Information Processing Systems_, 2022, pp. 36479–36494.
+
+[11] C. Lin, "Microsoft COCO: Common Objects in Context," in _Computer Vision – ECCV 2014_, 2014, pp. 740–755.
