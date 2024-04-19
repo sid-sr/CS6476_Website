@@ -242,7 +242,16 @@ On the other hand, MS-COCO SoftNeg performed very poorly, this most likely point
 
 ### Discussion:
 
+The task we chose is in an active area of research, and is very challenging. Compositionality in these generative models is far from perfect, and even state-of-the-art methods like DiffusionITM presented in NeurIPS 2023 achieve performance much worse than random chance (for image retrieval in Winoground). While our soft-negative formulation might not be effective in improving this, we strongly feel LLMs have potential in improved caption generation, especially if we engineer  prompt with a more concrete definition, elicit reasoning in caption generation, and also use a better LLM such as GPT-4. These are some areas we would like to work on in the future. 
+
+Besides this, we learnt a lot about how solutions for state-of-the-art research challenges develop by reading through papers and their reviews. Specifically, for a challenge like compositionality, its a very broad area that a few benchmarks cannot fully capture. But one solution is to simply incentivise the model to learn what would make it perform well on that specifics of that benchmark. The reviewers of [2] [mentioned this](https://openreview.net/forum?id=KRLUvxh8uaX&noteId=4fjdfnFYwB) (strengths and weaknesses) is in the ICLR 2023 review, and the authors agreed.
+
+
 ### Challenges Encountered:
+
+We faced multiple issues in setting up large-scale distributed training in our initial setup, and had to spend signficant time in debugging training loops, narrowing down potential bugs, testing for them independently etc. Generating compositional hard-negatives was also very challenging, since its definition is nuanced and dependent on the specifics of the image. We often noticed our generated captions did contain new items and concepts not present in the original image. Our soft-negative formulation had not been tried before, so ensuring our implementation was bug-free with sanity checks etc. was time-consuming. 
+
+If we had to start over, from a testing strategy point of view, we would ensure we get an estimate of how many samples we can train with (based on the compute) before we go ahead with caption generation, because we did generate 109k hard-negatives captions, but ony ended up training with 8k, leading to an inefficiency. In terms of approaching the problem, we could have tried to mathematically ground why a soft-negative loss would work potentially, before going into experimentation, this would have given us more confidence and assurance on whether it will or will not be effective.
 
 
 ### Team Member Contributions: 
