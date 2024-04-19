@@ -152,9 +152,7 @@ Figure 4 shows an example of the caption-generation component, with a real hard-
 
 **Experiment Purpose**
 
-We run two experiments, both fine-tuning the Stable Diffusion 1.5 model using the MS-COCO dataset. The first one uses the soft-negative loss we formulated, while the second one uses the hard-negative loss used in DiffusionITM [2] but with our LLM-generated hard-negatives. 
-
-To generate hard-negative captions, we used a self-hosted LLaMA-2 model on an NVIDIA V100 GPU using Colab Pro. Given the length of our prompt and compute, one limitation was that we needed to ensure our prompts are short enough to generate captions in a reasonable amount of time for 109k captions. This is a reason why we did not go with a more concrete description of hard-negatives in the prompt and did not provide too many examples. Overall, the prompt generation took ~10 hours. 
+We run two experiments, both fine-tuning the Stable Diffusion 1.5 model using the MS-COCO dataset. The first one uses the soft-negative loss we formulated, while the second one uses the hard-negative loss used in DiffusionITM [2] but with our LLM-generated hard-negatives. To generate hard-negative captions, we used a self-hosted LLaMA-2 model on an NVIDIA V100 GPU using Colab Pro. With these fine-tuning methods, we expect improved visuo-linguistic reasoning performance on a benchmark defined below.
 
 **Input Description**
 
@@ -235,10 +233,13 @@ The MS-COCO HardNeg-LLM model generated the following DiffusionITM scores:
 
 It preferred the right caption for the first image (0.1852 > 0.1813), but it preferred the wrong caption for the second image (0.0195 > 0.0180).
 
-
 **Key Result Performance**
 
+The performance of MS-COCO HardNeg-LLM mainly comes down to the quality of the hard-negative captions. We tested multiple prompts to help improve the quality of captions, ensuring the model does not generate completely different scenes but still changes the composition just enough. Given the length of our prompt and compute constraints, one limitation was that we needed to ensure our prompts are short enough to generate captions in a reasonable amount of time for 109k captions. This is a reason why we did not go with a more concrete description of hard-negatives in the prompt and did not provide too many examples. Overall, the prompt generation took ~10 hours. For training, we initially started off with just the first 8k samples out of 109k, and stopped there due to compute constraints. Finally, we sampled 8k samples out of 109k at random, and ran two epochs, which improved performance.
 
+MS-COCO HardNeg-LLM did perform better than MS-COCO HardNeg in [1]. While this improvement seems marginal, it is significant considering we only fine-tuned with 8k samples for 2 epochs with a very small batch size of 4, while [1] used a batch size of 112 with 109k samples for 8 epochs. Results could improve further if we scale up our training.
+
+On the other hand, MS-COCO SoftNeg performed very poorly, this most likely points to an inconsistency in our loss formulation. We aimed to test out if simply incentivising the model to learn to minimise the prediction error on the correct caption compared to the unconditioned noise prediction error does not necessarily help solve the bag-of-words problem mentioned in [2], leading to poor Winoground scores.
 
 ### Discussion:
 
