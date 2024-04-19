@@ -162,6 +162,10 @@ We used the sample of the MS-COCO 2014 [11] dataset used in the DiffusionITM [1]
 
 DiffusionITM [1] provides anywhere between one and four hard-negative captions for each image, and samples any one at random during training. We added our LLM-generated hard-negative caption to this list for each image. We did not fine-tune purely on the LLM-generated hard-negatives alone, since we could not generate multiple distinct yet grammatically and semantically valid hard-negatives through an LLM. 
 
+|![Another MS COCO example](assets/images/mscoco/example_mscoco.png)|
+|:-:|
+|Figure 5: An example from MS-COCO|
+
 **Desired Output Description**
 
 The text-to-image Stable Diffusion 1.5 simply model generates an image conditioned on a caption. Now, the DiffusionITM [1] formulation transforms the model to work for zero-shot image-text matching as follows: it defines the DiffusionITM score as the noise prediction error of the SD model conditioned on the caption and subtracts it from the error when not conditioned on the caption (no text). This score measures similarity between the caption and image, so a positive caption-image pair should ideally have a higher score than the same image paired with a compositionally hard-negative caption, exhibiting visuo-linguistic reasoning.
@@ -182,24 +186,59 @@ In the similar way, the image score is defined as the fraction of samples where 
 
 |![Winoground Example](assets/images/winoground.png)|
 |:-:|
-|Figure 5: Two complementary Winoground image-text pairs, taken from [8, Figure 1].|
+|Figure 6: Two complementary Winoground image-text pairs, taken from [8, Figure 1].|
+
+#### Fine-tuning details
+
+For fine-tuning, we initially performed distributed training on 4 NVIDIA A40s for 8 epochs, which took ~32 hours. But we had inconsistent results and invalid gradients due to memory leaks during gradient accumulation, so the intermediate results in our mid-semester update might not have been valid. So we switched to Colab Pro for fine-tuning, on a single NVIDIA V100, which meant our dataset had to be scaled down to ensure reasonable training time and cost. To account for this, we fine-tuned on 8k samples from MS-COCO with a batch size of 4, for two epochs (4000 steps). For benchmark evaluation, Winoground took ~20 minutes per run.
 
 ### Results: 
 
-**Experiment 1**: We are fine-tuning the Stable Diffusion-1.5 using our soft negative loss in equation (2) on the same MS-COCO dataset that was used for hard negative training in [1] for fair comparison. 
+We denote the model fine-tuned with our soft-negative loss (from Equation 2) as MS-COCO SoftNeg, and the hard-negative model fine-tuned on the LLM-generated captions as MS-COCO HardNeg-LLM.
 
-| Method | ImageCode (Image) | Winoground (Image) | Winoground (Text)
-|-------|--------|---------|--------|
-| Vanilla SD            | 30.1 | 9.0 | 32.3|
-| + MS-COCO NoNeg       | 29.7 | 10.3 | 35.0 |
-| + MS-COCO HardNeg     | 31.9 | 9.8 | 30.8 |
-| + **MS-COCO SoftNeg** | 29.6 | 8.8 | 30.9 |
+| Method | Winoground (Image) | Winoground (Text)
+|----------------|--------|
+| Vanilla SD            | 9.0 | 32.3|
+| + MS-COCO NoNeg       | 10.3 | 35.0 |
+| + MS-COCO HardNeg     | 9.6 | 33.7 |
+| + **MS-COCO HardNeg-LLM** | **10.0** | 31.0 |
+| + **MS-COCO SoftNeg**     | 4.0 | 9.25 |
 
-Table 1: Results on GDBench components for two image retrieval tasks (ImageCode and Winoground), and one text retrieval task (Winoground). Our method **MS-COCO SoftNeg** is in bold, the results for the other methods were borrowed from [1]. The ImageCode dataset variant used is the image one, and the metric shown is R@1. The Winoground metric reported here is accuracy.
+Table 1: Results on Winoground benchmark. Our two methods are in bold. Winoground metric reported here is accuracy score.
 
-For fine-tuning, we performed distributed training on 4 NVIDIA A40s for 8 epochs, which took ~32 hours. For benchmark evaluation, ImageCode took ~45 minutes, and Winoground took ~20 minutes. At this scale, hyperparameters like batch size make a significant difference in results, so these results are very initial, we are currently experimenting with these parameters. For running benchmarks on fine-tuned models, we are also utilising an NVIDIA V100 on Colab Pro.
+**Baselines**
 
-For the hard-negative generation experiment, we are experimenting with zero- and few-shot prompting, and are yet to start fine-tuning SD on these captions.
+A random baseline for Winoground would yield a score of 25%. We also use a vanilla Stable Diffusion, along with variants of models trained in [1]. The MS-COCO NoNeg model simply fine tunes vanilla SD on MS-COCO, while MS-COCO HardNeg uses the rule-based hard-negative generation in [1] (no image negatives) with the DiffusionITM objective. The Winoground text and image scores for these are shown in Table 1, and are taken from [1, pp. 8, Table 2]. Our comparison is fair, it uses the same number of sampling steps as [1] (10), and the same base dataset (MS-COCO) for fine-tuning.
+
+**Key Result Presentation**
+
+MS-COCO HardNeg-LLM achieves marginally better image score than the rule-based hard-negative generation used in [1]. However, all the methods are much worse than random chance baseline of 25%. MS-COCO HardNeg-LLM is marginally worse than the other methods in text score, but better than the random baseline. MS-COCO SoftNeg on the other performs signficantly worse than all other methods, going below well below the random baseline even for text scores.
+
+Looking at a qualitative example from Winoground, the following is a correct image-text pair $$(C_0, I_0)$$.
+
+|![Winoground Example 2](assets/images/old_young.png)|
+|:-:|
+|Figure 7: A Winoground example pair with caption "an old person kisses a young person".|
+
+The following is another correct complementary pair $$(C_1, I_1)$$.
+
+|![Winoground Example 3](assets/images/young_old.png)|
+|:-:|
+|Figure 8: Complementary Winoground example pair with caption "a young person kisses an old person".|
+
+The MS-COCO HardNeg-LLM model generated the following DiffusionITM scores:
+
+1. $$(C_0, I_0)$$ - 0.1852
+2. $$(C_0, I_1)$$ - 0.0195
+3. $$(C_1, I_0)$$ - 0.1813
+4. $$(C_1, I_1)$$ - 0.0180
+
+It preferred the right caption for the first image (0.1852 > 0.1813), but it preferred the wrong caption for the second image (0.0195 > 0.0180).
+
+
+**Key Result Performance**
+
+
 
 ### Discussion:
 
