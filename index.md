@@ -8,7 +8,7 @@ toc: true
 - Archana Kutumbaka
 - Siddharth Sriraman
 
-[GitHub Repo](https://github.com/archana53/diffusion-itm/) (training code [branch](https://github.com/archana53/diffusion-itm/tree/final_train)) and [Website Repo](https://github.com/sid-sr/CS6476_Website/)
+[GitHub Repo](https://github.com/archana53/diffusion-itm/) (training code [branch](https://github.com/archana53/diffusion-itm/tree/train_final)) and [Website Repo](https://github.com/sid-sr/CS6476_Website/)
 
 ## Introduction / Problem Definition: 
 **High-level Description and Motivation**: Diffusion models operate by gradually transforming random noise into a coherent output (like an image, audio, or video) through a process that iteratively refines the output by predicting and removing noise at each step, guided by learned data patterns. This unique approach allows them to scale up to mega-resolutions, enabling the creation of highly detailed and imaginative outputs across various forms of media, showcasing their remarkable ability to synthesize complex and nuanced content.
